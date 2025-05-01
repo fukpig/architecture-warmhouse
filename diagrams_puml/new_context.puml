@@ -1,0 +1,50 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Диаграмма контейнеров системы телеметрии
+
+Person(user, "Пользователь", "Пользователь системы")
+System_Ext(devices, "Устройства", "Физические устройства с датчиками")
+
+System_Boundary(system, "") {
+    Container(api_gateway, "API шлюз", "GO", "Единая точка входа для всех клиентских запросов")
+    
+    Container(telemetry_receiver, "Шлюз для телеметрии", "GO", "Принимает данные телеметрии с устройств")
+    Container(kafka, "Kafka", "Apache Kafka", "Брокер сообщений для передачи телеметрии")
+    Container(telemetry_processor, "Телеметрия", "GO", "Обрабатывает и сохраняет данные телеметрии")
+    ContainerDb(postgresql_telemetry, "База данных", "PostgreSQL", "Хранит данные телеметрии")
+
+    Container(device_service, "Управление устройствами/модулями", "GO", "Управляет устройствами/модулями и обрабатывает команды пользователей")
+    Container(house_service, "Управление домами", "GO", "Управляет домами")
+    Container(user_service, "Управление пользователями", "GO", "Управляет пользователями и аутентификацией")
+    Container(support_service, "Служба поддержки", "GO", "Обрабатывает запросы в поддержку")
+    Container(notification_service, "Уведомления", "GO", "Отправляет уведомления пользователям")
+
+    ContainerDb(postgresql_devices, "База данных устройств", "PostgreSQL", "Хранит данные девайсов")
+    ContainerDb(postgresql_users, "База данных пользователей", "PostgreSQL", "Хранит данные пользователей")
+    ContainerDb(postgresql_houses, "База данных домов", "PostgreSQL", "Хранит данные домов")
+    ContainerDb(postgresql_support, "База данных поддержки", "PostgreSQL", "Хранит данные запросов в поддержку")
+}
+
+Rel(devices, telemetry_receiver, "Отправляет данные телеметрии", "MQTT/HTTP")
+Rel(telemetry_receiver, kafka, "Публикует данные телеметрии", "JSON")
+Rel(telemetry_processor, kafka, "Подписывается на данные телеметрии", "JSON")
+Rel(telemetry_processor, postgresql_telemetry, "Сохраняет данные телеметрии", "SQL")
+
+Rel(user, api_gateway, "Взаимодействует с системой", "HTTP/REST")
+Rel(api_gateway, device_service, "Перенаправляет запросы", "HTTP/REST")
+Rel(api_gateway, house_service, "Перенаправляет запросы", "HTTP/REST")
+Rel(api_gateway, user_service, "Перенаправляет запросы", "HTTP/REST")
+Rel(api_gateway, support_service, "Перенаправляет запросы", "HTTP/REST")
+
+Rel(device_service, postgresql_devices, "Читает/записывает информацию об устройствах", "SQL")
+Rel(device_service, devices, "Отправляет команды управления", "MQTT/HTTP")
+Rel(house_service, postgresql_houses, "Читает/записывает информацию о домах", "SQL")
+Rel(user_service, postgresql_users, "Читает/записывает информацию о пользователях", "SQL")
+Rel(support_service, postgresql_support, "Читает/записывает информацию о запросах", "SQL")
+
+Rel(notification_service, user_service, "Получает информацию о пользователях", "HTTP/REST")
+Rel(device_service, notification_service, "Отправляет события для уведомлений", "HTTP/REST")
+Rel(house_service, notification_service, "Отправляет события для уведомлений", "HTTP/REST")
+Rel(support_service, notification_service, "Отправляет события для уведомлений", "HTTP/REST")
+@enduml
